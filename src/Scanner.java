@@ -6,10 +6,11 @@ import java.util.List;
 
 public class Scanner {
 	
-	private static final String[] KEYWORD = {"program", "begin", "end", "int", "input", "output", "if",
-			"then", "else", "endif", "do", "enddo", "while", "endwhile", "case", "of", "or", "EOF"};
+	private static final String[] KEYWORD = {"program", "begin", "end", "int", "fun", "call", "input", "output", "if",
+			"then", "else", "endif", "do", "enddo", "while", "endwhile", "case", "of", "or", "AND","return", "EOF"};
 	private static HashMap<String,Integer> VARIABLES = new HashMap<String,Integer>();
 	public static List<Integer> DATA = new LinkedList<Integer>();
+	
 	
 	
 	public static void startScan(String fileName) {
@@ -19,7 +20,6 @@ public class Scanner {
 	public static String currentToken() {
 		String cToken = Tokenizer.currentToken();
 		cToken = wrapToken(cToken);
-		System.out.println(cToken);
 		return cToken;
 	}
 	
@@ -31,7 +31,6 @@ public class Scanner {
 	public static void reset() { 
 		Tokenizer.reset(); 
 	}
-
 	public static void match(String keyword) {
 		String token = currentToken();
 		if (token.equals(keyword)) {
@@ -79,7 +78,7 @@ public class Scanner {
 		if (VARIABLES.containsKey(id)) {
 			VARIABLES.put(id, value);
 		} else {
-			System.out.println("ERROR: ID is not declared");
+			System.out.println("ERROR: ID is not declared when change Value");
 			System.exit(1);
 		}
 	}
@@ -91,7 +90,7 @@ public class Scanner {
 			value = VARIABLES.get(id);
 			return value;
 		} else {
-			System.out.println("ERROR: ID is not declared");
+			System.out.println("ERROR: ID" + id + " is not declared when getIdValue ");
 			System.exit(1);
 		}
 		return -1;
@@ -126,7 +125,6 @@ public class Scanner {
 		else if (cToken.equals("<=")) return "LESS_EQUAL";
 		else return "ERROR[" + cToken + "]";
 	}
-
 	
 	private static boolean hasNotAcceptableChar(String cToken) {
 		// TODO Auto-generated method stub
@@ -141,5 +139,4 @@ public class Scanner {
 		}
 	}
 	
-
 }

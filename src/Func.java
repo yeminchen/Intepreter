@@ -1,98 +1,155 @@
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
-public class ParserAndExecuter {
-
-	private Prog prog;
-	public List<Integer> DATA = new LinkedList<Integer>();
-	
-	public ParserAndExecuter() {
-		prog = new Prog();
-	}
-	public void parse() {
-		prog.parse();
-	}
-	
-	public void execute() {
-		prog.execute();
-	}
-	
-}
-
-class Prog {
-	private Decl_Seq declSeq;
-	private Statement_Seq stmtSeq;
-	
-	public void parse() {
-		Scanner.match("PROGRAM");
-		declSeq = new Decl_Seq();
-		declSeq.parse();
-		Scanner.match("BEGIN");
-		stmtSeq = new Statement_Seq();
-		stmtSeq.parse();
-		Scanner.match("END");
-		Scanner.match("EOF");
+public class Func {
 		
+		public static HashMap<String, Func> func_list = new HashMap<String,Func>();
+		public List<Integer> parameter = new LinkedList<Integer>();
+		public HashMap<String,Integer> VARIABLES = new HashMap<String,Integer>();
+		private FuncExpr fe;
+		private FuncDS ds;
+		private FuncSS ss;
+		private Func_ID_List idl;
+		private Para pm;
+		
+		
+		public void parse() {
+			Scanner.match("LEFT_P");
+			pm = new Para();
+			pm.parse();
+			Scanner.match("RIGHT_P");
+			ds = new FuncDS();
+			ds.parse();
+			Scanner.match("BEGIN");
+			ss = new FuncSS();
+			ss.parse();
+			Scanner.match("RETURN");
+			fe = new FuncExpr();
+			fe.parse();
+			Scanner.match("SEMI");
+			Scanner.match("END");
+			Scanner.match("SEMI");
+		}
+		
+		public int execute() {
+			pm.execute(this);
+			ds.execute(this);
+			ss.execute(this);
+			
+			return fe.execute(this);
+		}
+		
+		public void changeValue(String id, int value) {
+			if (this.VARIABLES.containsKey(id)) {
+				this.VARIABLES.put(id, value);
+			} else {
+				System.out.println("ERROR: ID is not declared when changeValue(func)");
+				System.exit(1);
+			}
+		}
+		
+		//return the value of id, report failure if it's not initialed.
+		public int getIdValue(String id) {
+			int value;
+			if (this.VARIABLES.containsKey(id)) {
+				value = this.VARIABLES.get(id);
+				return value;
+			} else {
+				System.out.println("ERROR: ID" + id + " is not declared when getIdValue (func)");
+				System.exit(1);
+			}
+			return -1;
+			
+		}
+		
+		public boolean isInVariableMap(String id) {
+			return this.VARIABLES.containsKey(id);
+		}
+		
+		public void putNewVariable(String id) {
+			this.VARIABLES.put(id, null);
+		}
+}
+
+class Para {
+	private Para pa;
+	private String id;
+	private int altNo;
+	
+	void parse() {
+		id = Scanner.getID();
+		Scanner.nextToken();
+		if (Scanner.currentToken().equals("COMMA")) {
+			altNo = 1;
+			Scanner.nextToken();
+			pa = new Para(); 
+			pa.parse();
+		}
 	}
 	
-	public void execute() {
-		declSeq.execute();
-		stmtSeq.execute();
+	
+	void execute(Func fc) {
+		int pv = fc.parameter.remove(0);
+		fc.VARIABLES.put(id, pv);
+		if (altNo == 1) {
+			pa.execute(fc);
+		}
 	}
 }
 
-class Decl_Seq {
+class FuncDS {
 	private int altNo = 0; 
-	private Decl_Seq declSeq;
-	private Decl decl;
+	private FuncDS declSeq;
+	private FuncDecl decl;
 	
 	public void parse() {
-		decl = new Decl();
+		decl = new FuncDecl();
 		decl.parse();
 		if (!Scanner.currentToken().equals("BEGIN")) {
 			altNo = 1;
-			declSeq = new Decl_Seq();
+			declSeq = new FuncDS();
 			declSeq.parse();
 		}
 	}
 	
-	public void execute() {
-		decl.execute();
+	public void execute(Func fc) {
+		decl.execute(fc);
 		if (altNo == 1) {
-			declSeq.execute();
+			declSeq.execute(fc);
 		}
 	}
 }
 
-class Statement_Seq {
+class FuncSS {
 	private int altNo = 0;
-	private Statement stmt;
-	private Statement_Seq stmt_seq;
+	private FuncSt stmt;
+	private FuncSS stmt_seq;
 	
 	
 	public void parse() {
-		stmt = new Statement();
+		stmt = new FuncSt();
 		stmt.parse();
 		String token = Scanner.currentToken();
 		if (!token.equals("END") && !token.equals("ENDIF")
-				&& !token.equals("ENDWHILE") && !token.equals("ELSE")) {
+				&& !token.equals("ENDWHILE") && !token.equals("ELSE") && !token.equals("RETURN")) {
 			altNo = 1;
-			stmt_seq = new Statement_Seq();
+			stmt_seq = new FuncSS();
 			stmt_seq.parse();
 		}
 	}
 	
-	public void execute() {
-		stmt.execute();
+	public void execute(Func fc) {
+		stmt.execute(fc);
 		if (altNo == 1) {
-			stmt_seq.execute();
+			stmt_seq.execute(fc);
 		}
 	}
 }
 
-class Decl {
-	private ID_List idls;
+class FuncDecl {
+	private Func_ID_List idls;
 	private Func func;
 	private int altNo;
 	
@@ -100,7 +157,7 @@ class Decl {
 		if (Scanner.currentToken().equals("INT")){
 			altNo = 1;
 			Scanner.nextToken();
-			idls = new ID_List();
+			idls = new Func_ID_List();
 			idls.parse();
 			Scanner.match("SEMI");
 		} else {
@@ -114,37 +171,37 @@ class Decl {
 		}
 	}
 	
-	public void execute() {
+	public void execute(Func fc) {
 		if (altNo == 1) {
-			idls.execute();
+			idls.execute(fc);
 		} 
 	}
 }
 
 
-class Statement {
+class FuncSt {
 	
 	private int altNo = 0;
-	private Assign assign;
-	private If cond;
-	private Loop lp;
+	private FuncAssign assign;
+	private FuncIf cond;
+	private FuncLoop lp;
 	private In input;
-	private Out out;
+	private FuncOut out;
 	
 	
 	public void parse() {
 		String token = Scanner.currentToken();
 		if (token.contains("ID")) {
 			altNo = 1;
-			assign = new Assign();
+			assign = new FuncAssign();
 			assign.parse();
 		} else if (token.equals("IF")) {
 			altNo = 2;
-			cond = new If();
+			cond = new FuncIf();
 			cond.parse();
 		} else if (token.equals("WHILE")){
 			altNo = 3;
-			lp = new Loop();
+			lp = new FuncLoop();
 			lp.parse();
 		} else if (token.equals("INPUT")) {
 			altNo = 4;
@@ -152,30 +209,30 @@ class Statement {
 			input.parse();
 		} else if (token.equals("OUTPUT")) {
 			altNo = 5;
-			out = new Out();
+			out = new FuncOut();
 			out.parse();
 		}
 	}
 	
-	public void execute() {
+	public void execute(Func fc) {
 		if (altNo == 1) {
-			assign.execute();
+			assign.execute(fc);
 		} else if (altNo == 2) {
-			cond.execute();
+			cond.execute(fc);
 		} else if (altNo == 3) {
-			lp.execute();
+			lp.execute(fc);
 		} else if (altNo == 4) {
 			input.execute();
 		} else if (altNo == 5) {
-			out.execute();
+			out.execute(fc);
 		}
 	}
 }
 
-class ID_List {
+class Func_ID_List {
 	private int altNo = 0;
 	private String id;
-	private ID_List idl;
+	private Func_ID_List idl;
 	
 	public void parse() {
 		id = Scanner.getID();
@@ -183,41 +240,41 @@ class ID_List {
 		if (Scanner.currentToken().equals("COMMA")) {
 			altNo = 1;
 			Scanner.nextToken();
-			idl = new ID_List(); 
+			idl = new Func_ID_List(); 
 			idl.parse();
 		}
 	}
 	
-	public void execute() {
-		if (!Scanner.isInVariableMap(id)) {
-			Scanner.putNewVariable(id);
+	public void execute(Func fc) {
+		if (!fc.isInVariableMap(id)) {
+			fc.putNewVariable(id);
 		} else {
 			System.out.println("ERROR: Variable " + id + " has already been instantiated.");
 			System.exit(1);
 		}
 		if (altNo == 1) {
-			idl.execute();;
+			idl.execute(fc);
 		}
 	}
 }
 
-class Assign {
-	private Expr exp;
+class FuncAssign {
+	private FuncExpr exp;
 	private String id;
 	
 	public void parse() {
 		id = Scanner.getID();
 		Scanner.nextToken();
 		Scanner.match("ASSIGN");
-		exp = new Expr();
+		exp = new FuncExpr();
 		exp.parse();
 		Scanner.match("SEMI");
 	}
 	
-	public void execute() {
-		if (Scanner.isInVariableMap(id)) {
-			int value = exp.execute();
-			Scanner.changeValue(id, value);
+	public void execute(Func fc) {
+		if (fc.isInVariableMap(id)) {
+			int value = exp.execute(fc);
+			fc.changeValue(id, value);
 		} else {
 			System.out.println("ERROR: variable id " + id + " has not been declared");
 			System.exit(1);
@@ -225,62 +282,62 @@ class Assign {
 	}
 }
 
-class If {
+class FuncIf {
 	private int altNo = 0;
-	private Cond cond;
-	private Statement_Seq sts;
-	private Statement_Seq else_sts;
+	private FuncCond cond;
+	private FuncSS sts;
+	private FuncSS else_sts;
 	
 	public void parse() {
 		Scanner.match("IF");
-		cond = new Cond(); 
+		cond = new FuncCond(); 
 		cond.parse();
 		Scanner.match("THEN");
-		sts = new Statement_Seq();
+		sts = new FuncSS();
 		sts.parse();
 		String token = Scanner.currentToken();
 		if (token.equals("ELSE")) {
 			altNo = 1;
 			Scanner.nextToken();
-			else_sts = new Statement_Seq(); 
+			else_sts = new FuncSS(); 
 			else_sts.parse();
 		}
 		Scanner.match("ENDIF");
 		Scanner.match("SEMI");
 	}
 	
-	public void execute() {
-		if (cond.execute()) {
-			sts.execute();
+	public void execute(Func fc) {
+		if (cond.execute(fc)) {
+			sts.execute(fc);
 		} else if (altNo == 1) {
-			else_sts.execute();
+			else_sts.execute(fc);
 		}
 	}
 }
 
-class Loop {
-	private Statement_Seq sts;
-	private Cond cond;
+class FuncLoop {
+	private FuncSS sts;
+	private FuncCond cond;
 	
 	public void parse() {
 		Scanner.match("WHILE");
-		cond = new Cond(); 
+		cond = new FuncCond(); 
 		cond.parse();
 		Scanner.match("BEGIN");
-		sts = new Statement_Seq();
+		sts = new FuncSS();
 		sts.parse();
 		Scanner.match("ENDWHILE");
 		Scanner.match("SEMI");
 	}
 	
-	public void execute() {
-		while (cond.execute()) {
-			sts.execute();
+	public void execute(Func fc) {
+		while (cond.execute(fc)) {
+			sts.execute(fc);
 		}
 	}
 }
 
-class In {
+class FuncIn {
 	private String id;
 	
 	public void parse() {
@@ -290,11 +347,11 @@ class In {
 		Scanner.match("SEMI");
 	}
 	
-	public void execute() {
+	public void execute(Func fc) {
 		List<Integer> dt = Scanner.DATA;
 		if (dt.size() > 0) {
 			int input = dt.remove(0);
-			Scanner.changeValue(id, input);
+			fc.changeValue(id, input);
 		} else {
 			System.out.println("no more input");
 		}
@@ -302,52 +359,52 @@ class In {
 	}
 }
 
-class Cond {
+class FuncCond {
 	private int altNo = 0;
-	private Cmpr cmp;
-	private Cond cond;
+	private FuncCmpr cmp;
+	private FuncCond cond;
 	
 	public void parse() {
 		if (Scanner.currentToken().equals("NOT")) {
 			altNo = 1;
 			Scanner.nextToken();
 			Scanner.match("LEFT_P");
-			cond = new Cond();
+			cond = new FuncCond();
 			cond.parse();
 			Scanner.match("RIGHT_P");
 		} else {
 			altNo = 2;
-			cmp = new Cmpr();
+			cmp = new FuncCmpr();
 			cmp.parse();
 			if (Scanner.currentToken().equals("OR")) {
 				altNo = 3;
 				Scanner.nextToken();
-				cond = new Cond();
+				cond = new FuncCond();
 				cond.parse();
 			}
 		}
 	}
 	
-	public boolean execute() {
+	public boolean execute(Func fc) {
 		if (altNo == 1) {
-			return (!(cond.execute()));
+			return (!(cond.execute(fc)));
 		} else if (altNo == 2) {
-			return cmp.execute();
+			return cmp.execute(fc);
 		} else if (altNo == 3) {
-			return (cmp.execute() || cond.execute());
+			return (cmp.execute(fc) || cond.execute(fc));
 		}
 		return false;
 	}
 }
 
-class Cmpr {
+class FuncCmpr {
 	private int altNo;
-	private Expr exp1;
-	private Expr exp2;
+	private FuncExpr exp1;
+	private FuncExpr exp2;
 	private String op;
 	
 	public void parse() {
-		exp1 = new Expr();
+		exp1 = new FuncExpr();
 		exp1.parse();
 		String token = Scanner.currentToken();
 		if (token.equals("EQUAL") || token.equals("LESS") || token.equals("LESS_EQUAL")) {
@@ -357,15 +414,15 @@ class Cmpr {
 			System.out.println("ERROR: Expected a comparison operator, found " + token);
 			System.exit(1); // Failure Case
 		}
-		exp2 = new Expr();
+		exp2 = new FuncExpr();
 		exp2.parse();
 		
 		
 	}
 	
-	public boolean execute() {
-		int val1 = exp1.execute();
-		int val2 = exp2.execute();
+	public boolean execute(Func fc) {
+		int val1 = exp1.execute(fc);
+		int val2 = exp2.execute(fc);
 		if (op.equals("EQUAL")) {
 			return (val1 == val2);
 		} else if (op.equals("LESS")) {
@@ -380,19 +437,19 @@ class Cmpr {
 /*
  * class for out
  */
-class Out {
+class FuncOut {
 	
-	private Expr exp;
+	private FuncExpr exp;
 	
 	public void parse() {
 		Scanner.match("OUTPUT");
-		exp = new Expr();
+		exp = new FuncExpr();
 		exp.parse();
 		Scanner.match("SEMI");
 	}
 	
-	public void execute() {
-		int result = exp.execute();
+	public void execute(Func fc) {
+		int result = exp.execute(fc);
 		System.out.println(result);
 	}
 }
@@ -400,36 +457,36 @@ class Out {
 /*
  * class of <expr>
  */
-class Expr {
+class FuncExpr {
 	
 	private int altNo;
-	private Term term;
-	private Expr exp;
+	private FuncTerm term;
+	private FuncExpr exp;
 	
 	public void parse() {
-		term = new Term(); 
+		term = new FuncTerm(); 
 		term.parse();
 		String token = Scanner.currentToken();
 		if (token.equals("PLUS")) {
 			altNo = 1;
 			Scanner.nextToken();
-			exp = new Expr(); 
+			exp = new FuncExpr(); 
 			exp.parse();
 		} else if (token.equals("MINUS")) {
 			altNo = 2;
 			Scanner.nextToken();
-			exp = new Expr(); 
+			exp = new FuncExpr(); 
 			exp.parse();
 		}
 		
 	}
 	
-	public int execute() {
-		int result = term.execute();
+	public int execute(Func fc) {
+		int result = term.execute(fc);
 		if (altNo ==1) { //op is +;
-			result = result + exp.execute();
+			result = result + exp.execute(fc);
 		} else if (altNo == 2) {
-			result = result - exp.execute();
+			result = result - exp.execute(fc);
 		}
 		
 		return result;
@@ -440,28 +497,28 @@ class Expr {
 /*
  * class of <term>
  */
-class Term {
+class FuncTerm {
 
 	private int altNo;
-	private Factor fct; 
-	private Term tm;
+	private FuncFactor fct; 
+	private FuncTerm tm;
 	
 	
 	public void parse() {
-		fct = new Factor();
+		fct = new FuncFactor();
 		fct.parse();
 		if (Scanner.currentToken().equals("MULTI")) {
 			altNo = 1;
 			Scanner.nextToken();
-			tm = new Term();
+			tm = new FuncTerm();
 			tm.parse();
 		}
 	}
 	
-	public int execute() {
-		int result = fct.execute();
+	public int execute(Func fc) {
+		int result = fct.execute(fc);
 		if (altNo == 1) {
-			result = result * tm.execute();
+			result = result * tm.execute(fc);
 		}
 		return result;
 	}
@@ -470,13 +527,13 @@ class Term {
 /*
  * Class of <factor>
  */
-class Factor {
+class FuncFactor {
 	private int altNo;
 	private int value;      // 0 ::= const;
 	private String id;      // 1 ::= id;
-	private Factor factor;  // 2 ::= -<factor>;
-	private Expr exp;
-	private Exp_List exl;
+	private FuncFactor factor;  // 2 ::= -<factor>;
+	private FuncExpr exp;
+	private Func_Exp_List exl;
 	
 	public void parse() {
 		if (Scanner.currentToken().contains("CONST")) {
@@ -491,7 +548,7 @@ class Factor {
 		} else if (Scanner.currentToken().contains("LEFT_P")) {
 			altNo = 2;
 			Scanner.match("LEFT_P");
-			exp = new Expr(); 
+			exp = new FuncExpr(); 
 			exp.parse();
 			Scanner.match("RIGHT_P");
 		} else if (Scanner.currentToken().equals("CALL")){
@@ -500,53 +557,53 @@ class Factor {
 			id = Scanner.getID();
 			Scanner.nextToken();
 			Scanner.match("LEFT_P");
-			exl = new Exp_List(); 
+			exl = new Func_Exp_List(); 
 			exl.parse();
 			Scanner.match("RIGHT_P");
 		}
 		
 	}
 	
-	public int execute() {
+	public int execute(Func fc) {
 		if (altNo == 0) {
 			return value;
 		} else if (altNo == 1) {
-			value = Scanner.getIdValue(id);
+			value = fc.getIdValue(id);
 			return value;
 		} else if (altNo == 2){
-			return exp.execute();
+			return exp.execute(fc);
 		} else {
-			Func fc = Func.func_list.get(id);
-			exl.execute(fc);//move expr list to parameter array
-			return fc.execute();
+			Func another_fc = Func.func_list.get(id);
+			exl.execute(fc, another_fc);//move expr list to parameter array
+			return another_fc.execute();
 		}
 	}
 
 }
 
-class Exp_List {
+class Func_Exp_List {
 	
-	private Expr exp;
-	private Exp_List exl;
+	private FuncExpr exp;
+	private Func_Exp_List exl;
 	int altNo;
 	
 	void parse() {
-		exp = new Expr();
+		exp = new FuncExpr();
 		exp.parse();
 		if (Scanner.currentToken().equals("COMMA")) {
 			altNo = 1;
 			Scanner.nextToken();
-			exl = new Exp_List();
+			exl = new Func_Exp_List();
 			exl.parse();
 		}
 		
 	}
 
-	void execute(Func fc) {
-		int res = exp.execute();
-		fc.parameter.add(res);
+	void execute(Func fc, Func another_fc) {
+		int res = exp.execute(fc);
+		another_fc.parameter.add(res);
 		if (altNo == 1) {
-			exl.execute(fc);
+			exl.execute(fc, another_fc);
 		}
 	}
 }

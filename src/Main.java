@@ -1,4 +1,3 @@
-
 public class Main {
 
 	public static void main(String[] args) {
@@ -13,7 +12,7 @@ public class Main {
 		}
 		ParserAndExecuter pe = new ParserAndExecuter();
 		pe.parse();
-		Scanner.readInput();
+		//Scanner.readInput();
 		pe.execute();
 	}
 

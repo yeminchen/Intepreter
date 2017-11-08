@@ -1,18 +1,20 @@
 program
-  int x,y;
-  int z,w;
-begin
-  input x;
-  w := x;
-  input y;
-  w := w + y;
-  input z;
-  w := w + z;
-  if w < 10 or !(!(x=2)) then
-    x := x + y;
+  int x,y,z;
+
+  fun add (a, b)
+  	int q;
+  begin
+  if a < 5 then
+  	q := 1;
   else
-  	y := x + y;
+  	q := 3;
   endif;
-  output x;
-  output y;
+  	return q;
+  end;
+  
+begin
+  x := 9;
+  y := 2;
+  z := call add(x,y);
+  output z;
 end
